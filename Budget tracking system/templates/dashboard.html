@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="dashboard-header">
+  <div>
+    <h1>Welcome back, {{ user_name }}!</h1>
+    <p>Here is your financial summary for {{ month_name }}.</p>
+  </div>
+</section>
+
+<section class="alert-card {{ 'danger' if available_balance < 0 else 'positive' }}">
+  <strong>{{ cash_message }}</strong>
+  {% if budget_alerts %}
+  <p>
+    You have <strong>{{ budget_alerts | length }}</strong> budget alert(s). Check the budget utilization chart below.
+  </p>
+  {% else %}
+  <p>All budget categories are within limits. Keep it up!</p>
+  {% endif %}
+</section>
+
+<div class="insights-grid">
+  <article class="insight-card positive">
+    <h3>Available Balance</h3>
+    <p class="insight-number">₹{{ '{:,.2f}'.format(available_balance) }}</p>
+    <span class="insight-subtitle">Money left after current month expenses</span>
+  </article>
+  <article class="insight-card warning">
+    <h3>Expense Ratio</h3>
+    <p class="insight-number">{{ '{:.2f}'.format(expense_ratio) }}%</p>
+    <span class="insight-subtitle">Of your monthly income</span>
+  </article>
+  <article class="insight-card info">
+    <h3>Budget Health</h3>
+    <p class="insight-number">{{ '{:.0f}'.format(budget_health) }}%</p>
+    <span class="insight-subtitle">Higher means healthier spending</span>
+  </article>
+  <article class="insight-card violet">
+    <h3>Total Budget</h3>
+    <p class="insight-number">₹{{ '{:,.2f}'.format(total_budget_amount) }}</p>
+    <span class="insight-subtitle">Planned for this month</span>
+  </article>
+  <article class="insight-card mint">
+    <h3>Budget Left</h3>
+    <p class="insight-number">₹{{ '{:,.2f}'.format(total_budget_left) }}</p>
+    <span class="insight-subtitle">Remaining available budget</span>
+  </article>
+</div>
+
+<div class="stats-grid">
+  <article class="stat-card">
+    <h3>Monthly Income</h3>
+    <p class="stat-number">₹{{ '{:,.2f}'.format(monthly_income) }}</p>
+  </article>
+  <article class="stat-card">
+    <h3>Monthly Expense</h3>
+    <p class="stat-number">₹{{ '{:,.2f}'.format(monthly_expense) }}</p>
+  </article>
+  <article class="stat-card">
+    <h3>Total Income</h3>
+    <p class="stat-number">₹{{ '{:,.2f}'.format(total_income) }}</p>
+  </article>
+  <article class="stat-card">
+    <h3>Total Expense</h3>
+    <p class="stat-number">₹{{ '{:,.2f}'.format(total_expense) }}</p>
+  </article>
+</div>
+
+<div class="chart-grid">
+  <section class="chart-card">
+    <h2>Expense by Category</h2>
+    <canvas id="expenseChart"></canvas>
+  </section>
+
+  <section class="chart-card">
+    <h2>Budget Utilization</h2>
+    <canvas id="budgetChart"></canvas>
+  </section>
+</div>
+
+<section class="detail-panel">
+  <div class="detail-card">
+    <h2>Top 3 Expense Categories</h2>
+    <ul class="detail-list">
+      {% for category in top_expense_categories %}
+      <li><strong>{{ category.category_name }}</strong> - ₹{{ '{:,.2f}'.format(category.amount) }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="detail-card">
+    <h2>Budget Alerts</h2>
+    {% if budget_alerts %}
+    <ul class="detail-list">
+      {% for alert in budget_alerts %}
+      <li>
+        <strong>{{ alert.category_name }}</strong> over budget by ₹{{ '{:,.2f}'.format(alert.spent - alert.limit_amount) }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="detail-note">No overspending alerts. You're on track.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="table-panel">
+  <h2>Recent Transactions</h2>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Date</th>
+          <th>Category</th>
+          <th>Type</th>
+          <th>Amount</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for transaction in recent_transactions %}
+        <tr>
+          <td>{{ transaction.transaction_id }}</td>
+          <td>{{ transaction.transaction_date }}</td>
+          <td>{{ transaction.category_name }}</td>
+          <td>{{ transaction.type }}</td>
+          <td>₹{{ '{:,.2f}'.format(transaction.amount) }}</td>
+          <td>{{ transaction.description }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+const expenseLabels = {{ expense_categories | map(attribute='category_name') | list | tojson }};
+const expenseData = {{ expense_categories | map(attribute='amount') | list | tojson }};
+const budgetLabels = {{ budget_utilization | map(attribute='category_name') | list | tojson }};
+const budgetLimits = {{ budget_utilization | map(attribute='limit_amount') | list | tojson }};
+const budgetSpent = {{ budget_utilization | map(attribute='spent') | list | tojson }};
+
+new Chart(document.getElementById('expenseChart'), {
+  type: 'pie',
+  data: {
+    labels: expenseLabels,
+    datasets: [{
+      label: 'Expense by category',
+      data: expenseData,
+      backgroundColor: ['#4F46E5', '#EC4899', '#F59E0B', '#10B981', '#3B82F6'],
+      borderWidth: 1
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom' }
+    }
+  }
+});
+
+new Chart(document.getElementById('budgetChart'), {
+  type: 'bar',
+  data: {
+    labels: budgetLabels,
+    datasets: [
+      {
+        label: 'Budget Limit',
+        data: budgetLimits,
+        backgroundColor: '#2563EB'
+      },
+      {
+        label: 'Spent',
+        data: budgetSpent,
+        backgroundColor: '#F97316'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      y: {
+        beginAtZero: true
+      }
+    }
+  }
+});
+</script>
+{% endblock %}

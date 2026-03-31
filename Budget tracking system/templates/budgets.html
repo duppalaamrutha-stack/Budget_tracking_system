@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="dashboard-header">
+  <div>
+    <h1>Budgets</h1>
+    <p>Create monthly spending goals and track limits by category.</p>
+  </div>
+</section>
+
+<div class="dashboard-grid">
+  <section class="form-panel small-panel">
+    <h2>Add Budget</h2>
+    <form method="post" action="{{ url_for('budgets') }}">
+      <label for="category_id">Category</label>
+      <select id="category_id" name="category_id" required>
+        <option value="">Select category</option>
+        {% for category in categories %}
+        <option value="{{ category.category_id }}">{{ category.name }} ({{ category.type }})</option>
+        {% endfor %}
+      </select>
+
+      <label for="limit_amount">Monthly Limit</label>
+      <input type="number" step="0.01" id="limit_amount" name="limit_amount" placeholder="0.00" required />
+
+      <label for="month">Month</label>
+      <input type="text" id="month" name="month" placeholder="April" required />
+
+      <button type="submit">Add Budget</button>
+    </form>
+  </section>
+
+  <section class="table-panel">
+    <h2>Budget Overview</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Month</th>
+            <th>Category</th>
+            <th>Limit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for budget in budgets %}
+          <tr>
+            <td>{{ budget.budget_id }}</td>
+            <td>{{ budget.month }}</td>
+            <td>{{ budget.category_name }}</td>
+            <td>₹{{ '{:,.2f}'.format(budget.limit_amount) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
